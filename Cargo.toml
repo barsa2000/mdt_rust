@@ -1,0 +1,19 @@
+[package]
+name = "mdt_rust"
+version = "0.1.0"
+authors = ["barsa2000 <barsanti-filippo2@hotmail.it>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pest = "2.1"
+pest_derive = "2.1"
+
+[lib]
+name = "mdt_parser"
+path = "src/mdt_parser/lib.rs"
+
+[[bin]]
+name = "mdt"
+path = "src/main.rs"
