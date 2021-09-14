@@ -9,10 +9,11 @@ edition = "2018"
 [dependencies]
 pest = "2.1"
 pest_derive = "2.1"
+regex = "1.4.2"
 
 [lib]
-name = "mdt_parser"
-path = "src/mdt_parser/lib.rs"
+name = "mdt"
+path = "src/mdt/lib.rs"
 
 [[bin]]
 name = "mdt"

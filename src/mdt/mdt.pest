@@ -1,0 +1,23 @@
+WHITESPACE = _{ " " | "\t"}
+COMMENT = _{("//"|"#") ~ (!(NEWLINE|EOI) ~ ANY)* ~ (NEWLINE|EOI) }
+
+special_symbol = {"."|","|"["|"]"|"{"|"}"|"("|")"|"\\"}
+alphabet = _{(!special_symbol)~'\x20'..'\x7f' | "\\" ~ ("-" | special_symbol)}
+
+direction = { ("<" | ">" | "-")+}
+no_br_list_d = {direction}
+square_br_list_d = {"[" ~ direction ~ "]"}
+curly_br_list_d = {"{" ~ direction ~ "}"}
+direction_list = _{ no_br_list_d | square_br_list_d | curly_br_list_d}
+
+symbol_list = @{(alphabet ~ ".." ~ alphabet | alphabet)+}
+no_br_list = {symbol_list}
+square_br_list = {"[" ~ symbol_list ~ "]"}
+curly_br_list = {"{" ~ symbol_list ~ "}"}
+symbol = _{ no_br_list | square_br_list | curly_br_list}
+string = {alphabet+}
+state = {string? ~ (square_br_list | curly_br_list)? ~ string?}
+
+rule = {"(" ~ state ~ "," ~ symbol ~ "," ~ state ~ "," ~ symbol ~ "," ~ direction_list ~ ")"}
+
+rules = {SOI ~ NEWLINE* ~ (rule ~ NEWLINE*)* ~ EOI}
