@@ -11,15 +11,12 @@ use pest::{iterators::Pair, Parser};
 #[grammar = "mdt/mdt.pest"]
 struct MDT;
 
-
 #[derive(Debug, Clone, Copy)]
 pub enum BracesType {
     None,
     Square,
     Curly,
 }
-
-
 
 pub fn parse(source: &str) -> Vec<MDTRule> {
     let lowercase_source = source.to_lowercase();
@@ -62,15 +59,18 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
     let mut square_braces_len = None;
     let mut curly_braces_len = None;
 
-    let mut update_lens = |brace_type: BracesType, len: usize| {
-        match brace_type {
+    let mut update_lens = |brace_type: BracesType, len: usize| match brace_type {
         BracesType::None => {
             if no_braces_len.is_none() {
                 no_braces_len = Some(len);
                 return;
             }
             if no_braces_len.unwrap() != len {
-                panic!("string too long: expected {}, found {}", no_braces_len.unwrap(), len);
+                panic!(
+                    "string too long: expected {}, found {}",
+                    no_braces_len.unwrap(),
+                    len
+                );
             }
         }
         BracesType::Square => {
@@ -79,7 +79,11 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
                 return;
             }
             if square_braces_len.unwrap() != len {
-                panic!("string too long: expected {}, found {}", square_braces_len.unwrap(), len);
+                panic!(
+                    "string too long: expected {}, found {}",
+                    square_braces_len.unwrap(),
+                    len
+                );
             }
         }
         BracesType::Curly => {
@@ -88,10 +92,13 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
                 return;
             }
             if curly_braces_len.unwrap() != len {
-                panic!("string too long: expected {}, found {}", curly_braces_len.unwrap(), len);
+                panic!(
+                    "string too long: expected {}, found {}",
+                    curly_braces_len.unwrap(),
+                    len
+                );
             }
         }
-    }
     };
 
     update_lens(current_b, current_l);
@@ -154,13 +161,15 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
         _ => unreachable!(),
     };
 
-    let symbol_list: String = cleanup_string(&expand_symbol_list(pair.into_inner().next().unwrap().as_str()));
+    let symbol_list: String = cleanup_string(&expand_symbol_list(
+        pair.into_inner().next().unwrap().as_str(),
+    ));
 
     let symbols_in_list = symbol_list.chars();
 
     maybe_pair = pair_inner.next();
 
-    let second_string:String;
+    let second_string: String;
     if maybe_pair.is_some() {
         let pair = maybe_pair.unwrap();
         second_string = cleanup_string(pair.as_str());
@@ -169,18 +178,13 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
     }
 
     let states_list: Vec<String> = symbols_in_list
-    .map(|c| format!("{}{}{}", first_string, c, second_string))
-    .collect();
+        .map(|c| format!("{}{}{}", first_string, c, second_string))
+        .collect();
 
-    (
-        braces,
-        states_list.clone(),
-        states_list.len(),
-    )
+    (braces, states_list.clone(), states_list.len())
 }
 
 fn cleanup_string(s: &str) -> String {
-
     let re = Regex::new(r"(?P<before>[^\\]?)\-").unwrap();
     let out = re.replace_all(s, "${before} ").to_string();
 
@@ -200,7 +204,7 @@ fn generate_states_from_symbol_pair(pair: Pair<Rule>) -> (BracesType, Vec<char>,
 
     let symbols_list: String = expand_symbol_list(pair.into_inner().next().unwrap().as_str());
 
-    let symbols_list= cleanup_string(symbols_list.as_str());
+    let symbols_list = cleanup_string(symbols_list.as_str());
 
     (braces, symbols_list.chars().collect(), symbols_list.len())
 }
