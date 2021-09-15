@@ -35,7 +35,11 @@ fn generate_mdtrules_from_program(rules: Pair<Rule>) -> Vec<MDTRule> {
 
     program
         .filter(|pair| pair.as_rule() == Rule::rule)
-        .map(|rule| generate_mdtrule_from_rule(rule))
+        .enumerate()
+        .map(|(i, rule)| {
+            println!("working on rule #{} [{}]", i, rule.as_str());
+            generate_mdtrule_from_rule(rule)
+        })
         .flatten()
         .collect()
 }
@@ -61,6 +65,10 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
 
     let mut update_lens = |brace_type: BracesType, len: usize| match brace_type {
         BracesType::None => {
+            if len == 1 {
+                return;
+            }
+
             if no_braces_len.is_none() {
                 no_braces_len = Some(len);
                 return;
@@ -102,8 +110,8 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
     };
 
     update_lens(current_b, current_l);
-    update_lens(next_b, next_l);
     update_lens(read_b, read_l);
+    update_lens(next_b, next_l);
     update_lens(write_b, write_l);
     update_lens(dir_b, dir_l);
 
@@ -119,11 +127,26 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
         for sb in 0..square_braces_len.unwrap_or(1) {
             for cb in 0..curly_braces_len.unwrap_or(1) {
                 out.push(MDTRule {
-                    current_state: current_sym[get_index(current_b, nb, sb, cb)].clone(),
-                    read_symbol: read_sta[get_index(read_b, nb, sb, cb)],
-                    next_state: next_sta[get_index(next_b, nb, sb, cb)].clone(),
-                    write_symbol: write_sym[get_index(write_b, nb, sb, cb)],
-                    direction: dir_dir[get_index(dir_b, nb, sb, cb)],
+                    current_state: current_sym
+                        .get(get_index(current_b, nb, sb, cb))
+                        .unwrap_or(current_sym.last().unwrap())
+                        .clone(),
+                    read_symbol: read_sta
+                        .get(get_index(read_b, nb, sb, cb))
+                        .unwrap_or(read_sta.last().unwrap())
+                        .clone(),
+                    next_state: next_sta
+                        .get(get_index(next_b, nb, sb, cb))
+                        .unwrap_or(next_sta.last().unwrap())
+                        .clone(),
+                    write_symbol: write_sym
+                        .get(get_index(write_b, nb, sb, cb))
+                        .unwrap_or(write_sym.last().unwrap())
+                        .clone(),
+                    direction: dir_dir
+                        .get(get_index(dir_b, nb, sb, cb))
+                        .unwrap_or(dir_dir.last().unwrap())
+                        .clone(),
                 })
             }
         }
