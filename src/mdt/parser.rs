@@ -19,12 +19,12 @@ pub enum BracesType {
 }
 
 pub fn parse(source: &str) -> Vec<MDTRule> {
-    let lowercase_source = source.to_lowercase();
+    let uppercase_source = source.to_uppercase();
 
-    println!("rules: {:#?}", lowercase_source);
+    println!("rules: {:#?}", uppercase_source);
 
     let mut rule_pairs =
-        MDT::parse(Rule::rules, &lowercase_source).unwrap_or_else(|e| panic!("{}", e));
+        MDT::parse(Rule::rules, &uppercase_source).unwrap_or_else(|e| panic!("{}", e));
     // println!("rules: {:#?}", rule_pairs);
     generate_mdtrules_from_program(rule_pairs.next().unwrap())
 }
@@ -184,9 +184,20 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
         _ => unreachable!(),
     };
 
-    let symbol_list: String = cleanup_string(&expand_symbol_list(
-        pair.into_inner().next().unwrap().as_str(),
-    ));
+    let mut list_inner = pair.into_inner();
+
+    let compl_or_list = list_inner.next().unwrap();
+    let list;
+    let compl;
+    if compl_or_list.as_rule() == Rule::compl {
+        compl = true;
+        list = list_inner.next().unwrap();
+    } else {
+        compl = false;
+        list = compl_or_list;
+    }
+
+    let symbol_list: String = cleanup_string(&expand_symbol_list(list.as_str(), compl));
 
     let symbols_in_list = symbol_list.chars();
 
@@ -207,16 +218,6 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
     (braces, states_list.clone(), states_list.len())
 }
 
-fn cleanup_string(s: &str) -> String {
-    let re = Regex::new(r"(?P<before>[^\\]?)\-").unwrap();
-    let out = re.replace_all(s, "${before} ").to_string();
-
-    let re = Regex::new(r"\\(?P<next>.)").unwrap();
-    let out = re.replace_all(&out, "${next}").to_string();
-
-    out
-}
-
 fn generate_states_from_symbol_pair(pair: Pair<Rule>) -> (BracesType, Vec<char>, usize) {
     let braces = match pair.as_rule() {
         Rule::no_br_list => BracesType::None,
@@ -224,8 +225,19 @@ fn generate_states_from_symbol_pair(pair: Pair<Rule>) -> (BracesType, Vec<char>,
         Rule::curly_br_list => BracesType::Curly,
         _ => unreachable!(),
     };
+    let mut pair_inner = pair.into_inner();
+    let compl_or_symbol_list = pair_inner.next().unwrap();
+    let symbol_list;
+    let compl;
+    if compl_or_symbol_list.as_rule() == Rule::compl {
+        compl = true;
+        symbol_list = pair_inner.next().unwrap();
+    } else {
+        compl = false;
+        symbol_list = compl_or_symbol_list;
+    }
 
-    let symbols_list: String = expand_symbol_list(pair.into_inner().next().unwrap().as_str());
+    let symbols_list: String = expand_symbol_list(symbol_list.as_str(), compl);
 
     let symbols_list = cleanup_string(symbols_list.as_str());
 
@@ -235,7 +247,6 @@ fn generate_states_from_symbol_pair(pair: Pair<Rule>) -> (BracesType, Vec<char>,
 fn generate_states_from_direction_pair(
     pair: Pair<Rule>,
 ) -> (BracesType, Vec<HeadDirection>, usize) {
-    //(BracesType, Vec<HeadDirection>) {
     let braces = match pair.as_rule() {
         Rule::no_br_list_d => BracesType::None,
         Rule::square_br_list_d => BracesType::Square,
@@ -257,10 +268,27 @@ fn generate_states_from_direction_pair(
     (braces, directions_list, pair.as_str().len())
 }
 
-fn expand_symbol_list(symbol_list: &str) -> String {
+fn cleanup_string(s: &str) -> String {
+    // println!("before: {:#?}", s);
+
+    let re = Regex::new(r"(?P<before>[^\\]?)\-").unwrap();
+    let out = re.replace_all(s, "${before} ").to_string();
+
+    let re = Regex::new(r"\\(?P<next>.)").unwrap();
+    let out = re.replace_all(&out, "${next}").to_string();
+
+    // println!("after: {:#?}", out);
+
+    out
+}
+
+fn expand_symbol_list(symbol_list: &str, compl: bool) -> String {
+    const ALPHABET: &'static str =
+        " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^-{|}";
+
     let split_list = symbol_list.split("..");
 
-    split_list
+    let expanded = split_list
         .zip(symbol_list.split("..").skip(1))
         .map(|(c, n)| {
             let current_last = c.chars().last().unwrap();
@@ -287,5 +315,11 @@ fn expand_symbol_list(symbol_list: &str) -> String {
             format!("{}{}", c, filling.iter().collect::<String>())
         })
         .collect::<String>()
-        + symbol_list.split("..").last().unwrap()
+        + symbol_list.split("..").last().unwrap();
+
+    if compl {
+        ALPHABET.replace(&expanded.chars().collect::<Vec<char>>()[..], "")
+    } else {
+        return expanded;
+    }
 }
