@@ -4,7 +4,7 @@ COMMENT = _{("//"|"#") ~ (!(NEWLINE|EOI) ~ ANY)* ~ (NEWLINE|EOI) }
 special_symbol = {"."|","|"["|"]"|"{"|"}"|"("|")"|"\\"}
 alphabet = _{(!special_symbol)~'\x20'..'\x7f' | "\\" ~ ("-" | special_symbol)}
 
-direction = { ("<" | ">" | "-")+}
+direction = @{ ("<" | ">" | "-")+}
 no_br_list_d = {direction}
 square_br_list_d = {"[" ~ direction ~ "]"}
 curly_br_list_d = {"{" ~ direction ~ "}"}
