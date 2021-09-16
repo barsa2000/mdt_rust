@@ -46,6 +46,6 @@ impl fmt::Display for MDTRule {
 }
 
 fn make_special_chars_printable(s: &str) -> String {
-    let re = Regex::new(r"(?P<c>[\\<\\>\\^\\.\\,\[\]\{\}\(\)\\])").unwrap();
+    let re = Regex::new(r"(?P<c>[<>^.,\[\]\{\}\(\)\\])").unwrap();
     re.replace(&s.replace(" ", "-"), "\\${c}").to_string()
 }
