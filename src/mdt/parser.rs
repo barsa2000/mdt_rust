@@ -21,11 +21,8 @@ pub enum BracesType {
 pub fn parse(source: &str) -> Vec<MDTRule> {
     let uppercase_source = source.to_uppercase();
 
-    println!("rules: {:#?}", uppercase_source);
-
     let mut rule_pairs =
         MDT::parse(Rule::rules, &uppercase_source).unwrap_or_else(|e| panic!("{}", e));
-    // println!("rules: {:#?}", rule_pairs);
     generate_mdtrules_from_program(rule_pairs.next().unwrap())
 }
 
@@ -37,8 +34,15 @@ fn generate_mdtrules_from_program(rules: Pair<Rule>) -> Vec<MDTRule> {
         .filter(|pair| pair.as_rule() == Rule::rule)
         .enumerate()
         .map(|(i, rule)| {
+            #[cfg(debug_assertions)]
             println!("working on rule #{} [{}]", i, rule.as_str());
-            generate_mdtrule_from_rule(rule)
+            let out = generate_mdtrule_from_rule(rule);
+            if cfg!(debug_assertions) {
+                println!("rule #{} generated {} rules:", i, out.len());
+                out.iter().for_each(|r| println!("{}", r));
+                println!();
+            }
+            out
         })
         .flatten()
         .collect()
@@ -129,24 +133,21 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
                 out.push(MDTRule {
                     current_state: current_sym
                         .get(get_index(current_b, nb, sb, cb))
-                        .unwrap_or(current_sym.last().unwrap())
+                        .unwrap_or_else(|| current_sym.last().unwrap())
                         .clone(),
-                    read_symbol: read_sta
+                    read_symbol: *read_sta
                         .get(get_index(read_b, nb, sb, cb))
-                        .unwrap_or(read_sta.last().unwrap())
-                        .clone(),
+                        .unwrap_or_else(|| read_sta.last().unwrap()),
                     next_state: next_sta
                         .get(get_index(next_b, nb, sb, cb))
-                        .unwrap_or(next_sta.last().unwrap())
+                        .unwrap_or_else(|| next_sta.last().unwrap())
                         .clone(),
-                    write_symbol: write_sym
+                    write_symbol: *write_sym
                         .get(get_index(write_b, nb, sb, cb))
-                        .unwrap_or(write_sym.last().unwrap())
-                        .clone(),
-                    direction: dir_dir
+                        .unwrap_or_else(|| write_sym.last().unwrap()),
+                    direction: *dir_dir
                         .get(get_index(dir_b, nb, sb, cb))
-                        .unwrap_or(dir_dir.last().unwrap())
-                        .clone(),
+                        .unwrap_or_else(|| dir_dir.last().unwrap()),
                 })
             }
         }
@@ -156,8 +157,6 @@ fn generate_mdtrule_from_rule(rule: Pair<Rule>) -> Vec<MDTRule> {
 }
 
 fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<String>, usize) {
-    // println!("rule: {:#?}", state_pair);
-
     let mut pair_inner = state_pair.into_inner();
     let mut maybe_pair = pair_inner.next();
 
@@ -175,8 +174,6 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
     }
 
     let pair = maybe_pair.unwrap();
-
-    // println!("rule: {:#?}", pair);
 
     let braces = match pair.as_rule() {
         Rule::square_br_list => BracesType::Square,
@@ -204,12 +201,11 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
     maybe_pair = pair_inner.next();
 
     let second_string: String;
-    if maybe_pair.is_some() {
-        let pair = maybe_pair.unwrap();
-        second_string = cleanup_string(pair.as_str());
-    } else {
-        second_string = "".to_string();
-    }
+
+    match maybe_pair {
+        Some(pair) => second_string = cleanup_string(pair.as_str()),
+        None => second_string = "".to_string(),
+    };
 
     let states_list: Vec<String> = symbols_in_list
         .map(|c| format!("{}{}{}", first_string, c, second_string))
@@ -269,22 +265,17 @@ fn generate_states_from_direction_pair(
 }
 
 fn cleanup_string(s: &str) -> String {
-    // println!("before: {:#?}", s);
-
     let re = Regex::new(r"(?P<before>[^\\]?)\-").unwrap();
     let out = re.replace_all(s, "${before} ").to_string();
 
     let re = Regex::new(r"\\(?P<next>.)").unwrap();
     let out = re.replace_all(&out, "${next}").to_string();
 
-    // println!("after: {:#?}", out);
-
     out
 }
 
 fn expand_symbol_list(symbol_list: &str, compl: bool) -> String {
-    const ALPHABET: &'static str =
-        " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^-{|}";
+    const ALPHABET: &str = " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^-{|}";
 
     let split_list = symbol_list.split("..");
 
@@ -320,6 +311,6 @@ fn expand_symbol_list(symbol_list: &str, compl: bool) -> String {
     if compl {
         ALPHABET.replace(&expanded.chars().collect::<Vec<char>>()[..], "")
     } else {
-        return expanded;
+        expanded
     }
 }
