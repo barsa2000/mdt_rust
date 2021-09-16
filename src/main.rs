@@ -1,5 +1,5 @@
 use mdt::parser;
-use mdt::Mdt::Mdt;
+use mdt::mdt::Mdt;
 
 // bin replace
 // static ISTRUZIONI: &str = "

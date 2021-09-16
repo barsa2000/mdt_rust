@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::MDTRule::*;
+use crate::mdtrule::*;
 
 use regex::Regex;
 use std::mem::swap;

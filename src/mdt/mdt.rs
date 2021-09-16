@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::fmt::{self};
 use std::rc::{Rc, Weak};
 
-use crate::MDTRule::*;
+use crate::mdtrule::*;
 
 #[derive(Debug)]
 pub struct Node {
