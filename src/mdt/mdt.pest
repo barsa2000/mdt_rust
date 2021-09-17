@@ -15,7 +15,7 @@ compl = {"^"}
 no_br_list = ${compl? ~ symbol_list}
 square_br_list = ${"[" ~ compl? ~ symbol_list ~ "]"}
 curly_br_list = {"{" ~ symbol_list ~ "}"}
-symbol = _{ no_br_list | square_br_list | curly_br_list}
+symbol = _{ no_br_list | square_br_list | curly_br_list | compl}
 string = ${(alphabet)+}
 state = @{string? ~ (square_br_list | curly_br_list)? ~ string?}
 
