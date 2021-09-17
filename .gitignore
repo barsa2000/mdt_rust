@@ -16,6 +16,7 @@ Cargo.lock
 .directory
 .vscode/
 main
+heaptrack*
 
 # Added by cargo
 
