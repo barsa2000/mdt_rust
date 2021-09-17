@@ -1,8 +1,10 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt::{self};
 use std::rc::{Rc, Weak};
 
 use crate::mdtrule::*;
+use crate::parser;
 
 #[derive(Debug)]
 pub struct Node {
@@ -47,7 +49,7 @@ impl Node {
 }
 
 pub struct Mdt {
-    rules: Vec<MDTRule>,
+    rules: HashMap<char, HashMap<String, MDTRule>>,
     first: Rc<RefCell<Node>>,
     head: Rc<RefCell<Node>>,
     state: String,
@@ -55,8 +57,19 @@ pub struct Mdt {
 }
 
 impl Mdt {
-    pub fn new(initial_tape: &str, rules: Vec<MDTRule>) -> Self {
-        let rules = rules.iter().rev().cloned().collect();
+    pub fn new(initial_tape: &str, rules_str: &str) -> Self {
+        let mut rules = HashMap::new();
+        let rules_vec = parser::parse(rules_str);
+
+        println!("rules in vec: {}", rules_vec.len());
+
+        rules_vec.iter().for_each(|r| {
+            let a = rules.entry(r.read_symbol).or_insert_with(HashMap::new);
+            a.insert(r.current_state.clone(), r.clone());
+        });
+        let hm_len = rules.iter().fold(0, |sum,(_,s_hm)|{sum + s_hm.len()});
+        println!("rules in hm: {}", hm_len);
+
         let first = Self::load_tape(initial_tape);
         Self {
             rules,
@@ -68,21 +81,21 @@ impl Mdt {
     }
 
     pub fn step(&mut self) -> bool {
-        let maybe_rule = self
-            .rules
-            .iter()
-            .find(|r| r.current_state == self.state && r.read_symbol == self.get_head_value());
-        if let Some(rule) = maybe_rule {
-            self.set_head_value(rule.write_symbol);
-            self.state = rule.next_state.clone();
-            self.move_head(rule.direction);
-            true
-        } else {
-            false
+        let maybe_sym_hashmap = self.rules.get(&self.get_head_value());
+        if let Some(sym_hashmap) = maybe_sym_hashmap {
+            let maybe_rule = sym_hashmap.get(&self.state);
+            if let Some(r) = maybe_rule {
+                self.set_head_value(r.write_symbol);
+                self.state = r.next_state.clone();
+                self.move_head(r.direction);
+                return true;
+            }
         }
+        false
     }
 
     fn load_tape(initial_tape: &str) -> Rc<RefCell<Node>> {
+        let initial_tape = initial_tape.to_uppercase();
         let first = Rc::new(RefCell::new(Node {
             id: 0,
             value: ' ',
