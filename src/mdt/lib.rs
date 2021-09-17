@@ -2,6 +2,9 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
-mod mdtrule;
+#[macro_use]
+extern crate lazy_static;
+
 pub mod mdt;
-pub mod parser;
+mod mdtrule;
+mod parser;
