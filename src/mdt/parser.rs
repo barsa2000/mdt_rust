@@ -33,16 +33,9 @@ fn generate_mdtrules_from_program(rules: Pair<Rule>) -> Vec<MDTRule> {
     program
         .filter(|pair| pair.as_rule() == Rule::rule)
         .enumerate()
-        .map(|(i, rule)| {
-            #[cfg(debug_assertions)]
-            println!("working on rule #{} [{}]", i, rule.as_str());
-            let out = generate_mdtrule_from_rule(rule);
-            if cfg!(debug_assertions) {
-                println!("rule #{} generated {} rules:", i, out.len());
-                out.iter().for_each(|r| println!("{}", r));
-                println!();
-            }
-            out
+        .map(|(_, rule)| {
+            generate_mdtrule_from_rule(rule)
+            
         })
         .flatten()
         .collect()
@@ -217,27 +210,34 @@ fn generate_states_from_state_pair(state_pair: Pair<Rule>) -> (BracesType, Vec<S
 fn generate_states_from_symbol_pair(pair: Pair<Rule>) -> (BracesType, Vec<char>, usize) {
     let braces = match pair.as_rule() {
         Rule::no_br_list => BracesType::None,
+        Rule::compl => BracesType::None,
         Rule::square_br_list => BracesType::Square,
         Rule::curly_br_list => BracesType::Curly,
         _ => unreachable!(),
     };
-    let mut pair_inner = pair.into_inner();
-    let compl_or_symbol_list = pair_inner.next().unwrap();
-    let symbol_list;
-    let compl;
-    if compl_or_symbol_list.as_rule() == Rule::compl {
-        compl = true;
-        symbol_list = pair_inner.next().unwrap();
+
+    if pair.as_rule() != Rule::compl {
+        let mut pair_inner = pair.into_inner();
+        let compl_or_symbol_list = pair_inner.next().unwrap();
+        let symbol_list;
+        let compl;
+        if compl_or_symbol_list.as_rule() == Rule::compl {
+            compl = true;
+            symbol_list = pair_inner.next().unwrap();
+        } else {
+            compl = false;
+            symbol_list = compl_or_symbol_list;
+        }
+
+        let symbols_list: String = expand_symbol_list(symbol_list.as_str(), compl);
+
+        let symbols_list = cleanup_string(symbols_list.as_str());
+        (braces, symbols_list.chars().collect(), symbols_list.len())
     } else {
-        compl = false;
-        symbol_list = compl_or_symbol_list;
+        let symbols_list: String = expand_symbol_list("", true);
+        let symbols_list = cleanup_string(symbols_list.as_str());
+        (braces, symbols_list.chars().collect(), symbols_list.len())
     }
-
-    let symbols_list: String = expand_symbol_list(symbol_list.as_str(), compl);
-
-    let symbols_list = cleanup_string(symbols_list.as_str());
-
-    (braces, symbols_list.chars().collect(), symbols_list.len())
 }
 
 fn generate_states_from_direction_pair(
@@ -265,11 +265,12 @@ fn generate_states_from_direction_pair(
 }
 
 fn cleanup_string(s: &str) -> String {
-    let re = Regex::new(r"(?P<before>[^\\]?)\-").unwrap();
-    let out = re.replace_all(s, "${before} ").to_string();
-
-    let re = Regex::new(r"\\(?P<next>.)").unwrap();
-    let out = re.replace_all(&out, "${next}").to_string();
+    lazy_static! {
+        static ref SPACES_REGEX: Regex = Regex::new(r"(?P<before>[^\\]?)\-").unwrap();
+        static ref SPECIAL_CHARS_REGEX: Regex = Regex::new(r"\\(?P<next>.)").unwrap();
+    }
+    let out = SPACES_REGEX.replace_all(s, "${before} ").to_string();
+    let out = SPECIAL_CHARS_REGEX.replace_all(&out, "${next}").to_string();
 
     out
 }
